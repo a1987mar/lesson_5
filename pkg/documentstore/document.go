@@ -61,6 +61,12 @@ func MarshalDocument(input interface{}) (*Document, error) {
 		case reflect.Bool:
 			FieldType = DocumentFieldTypeBool
 			FieldValue = val.Bool()
+		case reflect.Slice:
+			FieldType = DocumentFieldTypeArray
+			FieldValue = val.Interface()
+		case reflect.Struct:
+			FieldType = DocumentFieldTypeObject
+			FieldValue = val.Interface()
 		default:
 			continue
 		}
@@ -78,31 +84,28 @@ func UnmarshalDocument(doc *Document, output any) error {
 	v := reflect.ValueOf(output)
 
 	if v.Kind() != reflect.Ptr || v.Elem().Kind() != reflect.Struct {
-		return fmt.Errorf("output not struct")
+		return fmt.Errorf("output is not a pointer to a struct")
 	}
-
 	stValue := v.Elem()
 	stType := stValue.Type()
-
 	for i := 0; i < stType.NumField(); i++ {
 		f := stType.Field(i)
 		fValue := stValue.Field(i)
-
 		if !fValue.CanSet() {
 			continue
 		}
-
-		fmt.Println("\n", fValue)
-		if val, ok := doc.Fields[f.Name]; ok {
+		jsonTag := f.Tag.Get("json")
+		if jsonTag == "" {
+			jsonTag = f.Name
+		}
+		if val, ok := doc.Fields[jsonTag]; ok {
 			valR := reflect.ValueOf(val.Value)
 			if valR.Type().AssignableTo(fValue.Type()) {
 				fValue.Set(valR)
 			} else {
-				return fmt.Errorf("тип не співпадає")
+				return fmt.Errorf("type mismatch for field %s: expected %s but got %s", f.Name, fValue.Type(), valR.Type())
 			}
-
 		}
-
 	}
 	return nil
 }
