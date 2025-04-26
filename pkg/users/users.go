@@ -7,8 +7,8 @@ import (
 )
 
 const (
-	UserCollectionName = "name"
-	UserCollectionKey  = "id"
+	Users = "name"
+	Key   = "id"
 )
 
 type User struct {
@@ -21,8 +21,8 @@ type Service struct {
 }
 
 func NewService(s *documentstore.Store) Service {
-	s.CreateCollection(UserCollectionName, UserCollectionKey)
-	collect, _ := s.GetCollection(UserCollectionName)
+	s.CreateCollection(Users, Key)
+	collect, _ := s.GetCollection(Users)
 	return Service{
 		coll: collect,
 	}
@@ -33,15 +33,15 @@ func (s *Service) CreateUser(id, name string, doc *documentstore.Document) (*Use
 		return nil, err.ErrCreatedUser
 	}
 	if er := s.coll.Put(*doc); er != nil {
-		slog.Error(err.ErrCreatedUser.Error())
-		return nil, err.ErrCreatedUser
+		slog.Error(err.ErrAddUser.Error())
+		return nil, err.ErrAddUser
 	}
 
 	u := User{
 		Id:   id,
 		Name: name,
 	}
-	slog.Info("add user" + u.Id)
+	slog.Info("add user", slog.Any("userId", u.Id))
 	return &u, nil
 }
 
@@ -78,7 +78,7 @@ func (s *Service) GetUser(userID string) (*User, error) {
 
 func (s *Service) DeleteUser(userID string) error {
 	if ex := s.coll.Delete(userID); ex {
-		slog.Info("delete user" + userID)
+		slog.Info("delete user", slog.Any("userId", userID))
 		return nil
 	}
 	return err.ErrNotFound
